@@ -1,0 +1,13 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node dependencies
+node_modules/
+
+# Playwright artifacts and test outputs
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
