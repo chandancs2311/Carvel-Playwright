@@ -5,6 +5,7 @@ const MenuPage = require('./MenuPage');
 const ProductDetailsPage = require('./ProductDetailsPage');
 const CartPage = require('./CartPage');
 const CheckoutPage = require('./CheckoutPage');
+const SignUpPage = require('./SignUpPage');
 
 module.exports = {
   BasePage,
@@ -14,4 +15,5 @@ module.exports = {
   ProductDetailsPage,
   CartPage,
   CheckoutPage,
+  SignUpPage,
 };

@@ -123,6 +123,66 @@ class CheckoutPage extends BasePage {
     await this.page.waitForLoadState('networkidle').catch(() => {});
     await this.page.waitForTimeout(2000);
   }
+
+  /**
+   * Helper to parse monetary amounts from locator text.
+   * @param {import('@playwright/test').Locator} locator
+   * @returns {Promise<number>}
+   */
+  async getAmountFromLocator(locator) {
+    if (await locator.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+      const text = await locator.first().innerText().catch(() => '');
+      const match = text.match(/\$\s*(\d+(?:\.\d{1,2})?)/);
+      if (match) return parseFloat(match[1]);
+      const anyNum = text.match(/(\d+(?:\.\d{1,2})?)/);
+      if (anyNum) return parseFloat(anyNum[1]);
+    }
+    return 0;
+  }
+
+  /**
+   * Selects or adjusts tip amount on the Checkout page.
+   */
+  async selectTipOption() {
+    const tipSection = checkoutLocators.tipSection(this.page).first();
+    await tipSection.scrollIntoViewIfNeeded().catch(() => {});
+    await expect(tipSection).toBeVisible({ timeout: 20000 });
+
+    // Look for preset tip button (e.g. 20% or 15% or 10%)
+    const tip20 = this.page.getByRole('button', { name: '20%' }).first();
+    const tip15 = this.page.getByRole('button', { name: '15%' }).first();
+    const tip10 = this.page.getByRole('button', { name: '10%' }).first();
+
+    if (await tip20.isVisible({ timeout: 4000 }).catch(() => false)) {
+      await tip20.click({ force: true });
+    } else if (await tip15.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await tip15.click({ force: true });
+    } else if (await tip10.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await tip10.click({ force: true });
+    }
+
+    await this.page.waitForTimeout(1000);
+  }
+
+  /**
+   * Validates that the order total updates to include the Tip amount in the price breakdown.
+   */
+  async validateOrderTotalWithTip() {
+    // 1. Verify Tip line item appears in the order breakdown with amount > 0
+    let tipAmount = 0;
+    await expect(async () => {
+      const tipRow = checkoutLocators.tipBreakdownRow(this.page).first();
+      await expect(tipRow).toBeVisible({ timeout: 5000 });
+      tipAmount = await this.getAmountFromLocator(tipRow);
+      expect(tipAmount).toBeGreaterThan(0);
+    }).toPass({ timeout: 15000 });
+
+    // 2. Read final Order Total
+    const totalEl = checkoutLocators.orderTotal(this.page).first();
+    await expect(totalEl).toBeVisible({ timeout: 10000 });
+    const finalTotal = await this.getAmountFromLocator(totalEl);
+    expect(finalTotal).toBeGreaterThan(tipAmount);
+  }
 }
 
 module.exports = CheckoutPage;

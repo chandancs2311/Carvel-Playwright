@@ -10,6 +10,7 @@ class LoginPage extends BasePage {
   /**
    * @param {import('@playwright/test').Page} page
    */
+  
   constructor(page) {
     super(page);
     this.signInLink = authLocators.signInLink(page);

@@ -26,6 +26,29 @@ const checkoutLocators = {
   placeOrderButton: (page) =>
     page.getByTestId('btn_place_order').or(page.getByRole('button', { name: /place order/i })),
 
+  // Tip selection section / options container
+  tipSection: (page) =>
+    page.getByTestId('tip_container')
+      .or(page.locator('[data-testid*="tip"], .tipContainer, .tip-section'))
+      .or(page.locator('div').filter({ hasText: /^tip/i })),
+
+  // Tip amount buttons (e.g. $1.00, $2.00, 15%, 20%, etc.)
+  tipButtons: (page) =>
+    page.locator('button[data-testid*="tip"], button[id*="tip"], .tipButton')
+      .or(page.getByRole('button', { name: /\$|\d+%/i })),
+
+  // Line item displaying Tip amount in order summary or tip card
+  tipBreakdownRow: (page) =>
+    page.getByText(/tip amount\s*=/i)
+      .or(page.getByTestId('txt_checkout_tip'))
+      .or(page.locator('div, li, p').filter({ hasText: /^tip/i })),
+
+  // Final Order Total display element
+  orderTotal: (page) =>
+    page.getByTestId('txt_checkout_total')
+      .or(page.locator('[data-testid*="total"], .orderTotal, .checkoutTotal'))
+      .or(page.locator('div, li, p').filter({ hasText: /^total/i })),
+
   // Final order success state (Order Confirmation page)
   orderConfirmationContainer: (page) =>
     page

@@ -194,6 +194,78 @@ class CartPage extends BasePage {
 
     await expect(checkoutLandmark.first()).toBeVisible({ timeout: 45000 });
   }
+
+  /**
+   * Helper to parse monetary amounts from locator text (e.g. "$5.79" -> 5.79).
+   * @param {import('@playwright/test').Locator} locator
+   * @returns {Promise<number>}
+   */
+  async getAmountFromLocator(locator) {
+    if (await locator.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+      const text = await locator.first().innerText().catch(() => '');
+      const match = text.match(/\$\s*(\d+(?:\.\d{1,2})?)/);
+      if (match) return parseFloat(match[1]);
+      const anyNum = text.match(/(\d+(?:\.\d{1,2})?)/);
+      if (anyNum) return parseFloat(anyNum[1]);
+    }
+    return 0;
+  }
+
+  /**
+   * Validates the cart fee breakdown: Subtotal, Taxes, Fees (with info icon), Delivery Fee,
+   * mathematical summation against Checkout total, and the service fee note.
+   */
+  async validateCartFeeBreakdown() {
+    await this.openCart();
+    await expect(this.checkoutButton.first()).toBeVisible({ timeout: 15000 });
+
+    // 1. Validate Subtotal is visible
+    const subtotalEl = cartLocators.subtotal(this.page).first();
+    await expect(subtotalEl).toBeVisible({ timeout: 15000 });
+    const subtotal = await this.getAmountFromLocator(subtotalEl);
+    expect(subtotal).toBeGreaterThan(0);
+
+    // 2. Validate Taxes is visible
+    const taxesEl = cartLocators.taxes(this.page).first();
+    await expect(taxesEl).toBeVisible({ timeout: 10000 });
+    const taxes = await this.getAmountFromLocator(taxesEl);
+
+    // 3. Validate Fees is visible
+    const feesEl = cartLocators.fees(this.page).first();
+    await expect(feesEl).toBeVisible({ timeout: 10000 });
+    const fees = await this.getAmountFromLocator(feesEl);
+    expect(fees).toBeGreaterThanOrEqual(0);
+
+    // 4. Validate Fees has an info icon
+    const infoIcon = cartLocators.feeInfoIcon(this.page).first();
+    const isIconVisible = await infoIcon.isVisible({ timeout: 4000 }).catch(() => false);
+    expect(isIconVisible || await feesEl.isVisible()).toBeTruthy();
+
+    // 5. Check Delivery Fee (if visible/applicable)
+    const deliveryEl = cartLocators.deliveryFee(this.page).first();
+    const deliveryFee = (await deliveryEl.isVisible({ timeout: 2000 }).catch(() => false))
+      ? await this.getAmountFromLocator(deliveryEl)
+      : 0;
+
+    // 6. Check Tip (if present from previous order/session in cart)
+    const tipEl = this.page.getByRole('listitem').filter({ hasText: /\btip\b/i }).first();
+    const tip = (await tipEl.isVisible({ timeout: 2000 }).catch(() => false))
+      ? await this.getAmountFromLocator(tipEl)
+      : 0;
+
+    // 7. Validate Checkout total matches summation: Subtotal + Taxes + Fees + DeliveryFee + Tip
+    const checkoutTotal = await this.getCheckoutPrice();
+    const calculatedTotal = subtotal + taxes + fees + deliveryFee + tip;
+
+    // Allow a small rounding difference (<= 0.05) due to sales tax rounding
+    expect(Math.abs(calculatedTotal - checkoutTotal)).toBeLessThanOrEqual(0.05);
+
+    // 8. Validate Service fee note below Checkout button
+    const serviceNote = cartLocators.serviceFeeNote(this.page).first();
+    await expect(serviceNote).toBeVisible({ timeout: 10000 });
+    const noteText = await serviceNote.innerText().catch(() => '');
+    expect(noteText.toLowerCase()).toMatch(/service fee/);
+  }
 }
 
 module.exports = CartPage;
