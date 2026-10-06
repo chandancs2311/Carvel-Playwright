@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "test:smoke": "playwright test tests/smoke.spec.js",
+    "test:smoke": "playwright test tests/smoke",
+    "test:smoke:headed": "playwright test tests/smoke --headed --workers=1",
     "test:functional": "playwright test tests/functional",
     "test:regression": "playwright test tests/regression",
     "test:regression:headed": "playwright test tests/regression --headed --workers=1",

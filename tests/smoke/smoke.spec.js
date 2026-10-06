@@ -7,8 +7,8 @@ const {
   ProductDetailsPage,
   CartPage,
   CheckoutPage,
-} = require('../pages');
-const testData = require('../data/testData');
+} = require('../../pages');
+const testData = require('../../data/testData');
 
 test.describe('Carvel Smoke End-to-End Test', () => {
   // Run tests sequentially to avoid cart session and network collisions

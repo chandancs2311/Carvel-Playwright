@@ -70,7 +70,12 @@ The repository strictly adheres to the **Page Object Model (POM)**:
 │   ├── ProductDetailsPage.js   # Page actions for size/flavor modifier selection and add-to-cart
 │   └── index.js                # Central barrel export for all page classes
 ├── tests/
-│   └── smoke.spec.js           # 10-stage end-to-end smoke test scenario
+│   ├── smoke/
+│   │   └── smoke.spec.js           # 2 end-to-end smoke test scenarios (Registered & Guest)
+│   ├── functional/
+│   │   └── create-account.spec.js  # 2 functional test scenarios
+│   └── regression/
+│       └── cart-checkout.spec.js   # 2 regression test scenarios
 ├── .env                        # Local environment variables (credentials, addresses, cards)
 ├── .env.example                # Template for environment configuration
 ├── .gitignore                  # Git ignore rules for node_modules and reports
@@ -133,7 +138,7 @@ PAYMENT_POSTAL_CODE=10004
 
 ### Setup & Teardown Mechanisms
 
-Implemented in [`tests/smoke.spec.js`](file:///c:/Users/chandan.cherukuri/OneDrive%20-%20psiog.com/Desktop/Carvel%20smoke%20%20testing/tests/smoke.spec.js):
+Implemented in [`tests/smoke/smoke.spec.js`](file:///c:/Users/chandan.cherukuri/OneDrive%20-%20psiog.com/Desktop/Carvel%20smoke%20%20testing/tests/smoke/smoke.spec.js):
 
 * **`test.beforeEach(async ({ page }) => { ... })`**:
   - `page.on('dialog', (dialog) => dialog.accept())`: Listens for and automatically accepts native browser dialogs (alerts, confirms).
@@ -264,7 +269,7 @@ File: [`pages/CheckoutPage.js`](file:///c:/Users/chandan.cherukuri/OneDrive%20-%
 
 ## End-to-End Test Workflow (`smoke.spec.js`)
 
-File: [`tests/smoke.spec.js`](file:///c:/Users/chandan.cherukuri/OneDrive%20-%20psiog.com/Desktop/Carvel%20smoke%20%20testing/tests/smoke.spec.js)
+File: [`tests/smoke/smoke.spec.js`](file:///c:/Users/chandan.cherukuri/OneDrive%20-%20psiog.com/Desktop/Carvel%20smoke%20%20testing/tests/smoke/smoke.spec.js)
 
 | Stage | Action / Assertion | Page Object Method |
 | :--- | :--- | :--- |
