@@ -83,12 +83,26 @@ class CheckoutPage extends BasePage {
     const btn = this.placeOrderButton.first();
     await expect(btn).toBeVisible({ timeout: 15000 });
 
-    // If disabled, click the saved card option to trigger selection and dismiss "Please select a payment method"
+    // Ensure contact fields are not empty for guest checkout
+    const fn = checkoutLocators.firstNameInput(this.page).first();
+    if (await fn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      const val = await fn.inputValue().catch(() => '');
+      if (!val) {
+        await this.fillContactInfo({});
+      }
+    }
+
+    // If disabled, click the payment option to ensure selection is active and dismiss "Please select a payment method"
     if (await btn.isDisabled().catch(() => false)) {
-      const savedCardGroup = this.page.getByRole('radiogroup', { name: 'saved_Card' }).first();
-      await savedCardGroup.getByText(/ending in \d{4}/i).first().click({ force: true }).catch(() => {});
-      await savedCardGroup.getByRole('radio').first().click({ force: true }).catch(() => {});
-      await this.page.waitForTimeout(1000);
+      const newCardRadio = this.page.getByRole('radiogroup', { name: 'creditcard' }).getByRole('radio').first();
+      const isNewCardActive = await newCardRadio.isChecked().catch(() => false);
+
+      if (!isNewCardActive) {
+        const savedCardGroup = this.page.getByRole('radiogroup', { name: 'saved_Card' }).first();
+        await savedCardGroup.getByText(/ending in \d{4}/i).first().click({ force: true }).catch(() => {});
+        await savedCardGroup.getByRole('radio').first().click({ force: true }).catch(() => {});
+        await this.page.waitForTimeout(1000);
+      }
     }
 
     await expect(btn).toBeEnabled({ timeout: 15000 });
@@ -182,6 +196,227 @@ class CheckoutPage extends BasePage {
     await expect(totalEl).toBeVisible({ timeout: 10000 });
     const finalTotal = await this.getAmountFromLocator(totalEl);
     expect(finalTotal).toBeGreaterThan(tipAmount);
+  }
+
+  /**
+   * Selects the New Credit / Debit Card payment option.
+   */
+  async selectNewCardPayment() {
+    const cardRadio = this.page.getByTestId('btn_creditcard').first();
+
+    await expect(cardRadio).toBeVisible({ timeout: 25000 });
+    await cardRadio.scrollIntoViewIfNeeded().catch(() => {});
+
+    // Click creditcard radio option (switching away from Google Pay)
+    await cardRadio.click({ force: true });
+    await this.page.waitForTimeout(1000);
+
+    // Ensure the radio is checked
+    if (!(await cardRadio.isChecked().catch(() => false))) {
+      await cardRadio.check({ force: true }).catch(() => {});
+      await this.page.waitForTimeout(1000);
+    }
+
+    // Wait for FreedomPay / payment fields to mount
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Enters credit card details into the checkout payment form.
+   * @param {Object} cardDetails
+   * @param {string} cardDetails.cardNumber
+   * @param {string} [cardDetails.expirationDate]
+   * @param {string} [cardDetails.securityCode]
+   * @param {string} [cardDetails.postalCode]
+   */
+  async fillCardDetails({ cardNumber, expirationDate, securityCode, postalCode }) {
+    await this.page.waitForTimeout(1000);
+
+    const cleanCard = (cardNumber || '').replace(/\s+/g, '');
+
+    // Diagnostic logging to inspect actual Checkout DOM and payment frames
+    console.log('=== CHECKOUT PAYMENT DIAGNOSTICS ===');
+    console.log('Frames:', this.page.frames().map((f) => f.url()));
+    const pageInputs = await this.page
+      .locator('input')
+      .evaluateAll((els) =>
+        els.map((e) => ({
+          name: e.getAttribute('name'),
+          id: e.getAttribute('id'),
+          placeholder: e.getAttribute('placeholder'),
+          type: e.getAttribute('type'),
+          testid: e.getAttribute('data-testid'),
+        }))
+      )
+      .catch(() => []);
+    console.log('Page Inputs:', JSON.stringify(pageInputs, null, 2));
+
+    for (const f of this.page.frames()) {
+      const fInputs = await f
+        .locator('input')
+        .evaluateAll((els) =>
+          els.map((e) => ({
+            name: e.getAttribute('name'),
+            id: e.getAttribute('id'),
+            placeholder: e.getAttribute('placeholder'),
+            type: e.getAttribute('type'),
+          }))
+        )
+        .catch(() => []);
+      if (fInputs.length > 0) {
+        console.log(`Inputs in frame [${f.url()}]:`, JSON.stringify(fInputs, null, 2));
+      }
+    }
+    console.log('====================================');
+
+    /**
+     * Helper to find an input either on the main page or inside payment iframes (e.g. FreedomPay / Stripe)
+     * @param {import('@playwright/test').Locator} mainLocator
+     * @param {string} iframeInputSelector
+     * @returns {Promise<import('@playwright/test').Locator>}
+     */
+    const resolveInput = async (mainLocator, iframeInputSelector) => {
+      const startTime = Date.now();
+      while (Date.now() - startTime < 15000) {
+        if (await mainLocator.first().isVisible().catch(() => false)) {
+          return mainLocator.first();
+        }
+        for (const frame of this.page.frames()) {
+          const inputInFrame = frame.locator(iframeInputSelector).first();
+          if (await inputInFrame.isVisible().catch(() => false)) {
+            return inputInFrame;
+          }
+        }
+        await this.page.waitForTimeout(500);
+      }
+      return mainLocator.first();
+    };
+
+    // 1. Fill Card Number
+    const cardNum = await resolveInput(
+      checkoutLocators.cardNumberInput(this.page),
+      'input[name*="card" i], input[placeholder*="card" i], input[id*="card" i], input[type="tel"]'
+    );
+    await expect(cardNum).toBeVisible({ timeout: 20000 });
+    await cardNum.scrollIntoViewIfNeeded().catch(() => {});
+    await cardNum.click();
+    await cardNum.fill(cleanCard);
+
+    // 2. Fill Expiration Date
+    if (expirationDate) {
+      const exp = await resolveInput(
+        checkoutLocators.cardExpiryInput(this.page),
+        'input[name*="exp" i], input[placeholder*="MM" i], input[id*="exp" i]'
+      );
+      if (await exp.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await exp.click();
+        await exp.fill(expirationDate).catch(async () => {
+          await exp.fill(expirationDate.replace(/[^0-9]/g, ''));
+        });
+      }
+    }
+
+    // 3. Fill Security Code / CVV
+    if (securityCode) {
+      const cvv = await resolveInput(
+        checkoutLocators.cardCvvInput(this.page),
+        'input[name*="cv" i], input[placeholder*="CV" i], input[id*="cv" i]'
+      );
+      if (await cvv.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await cvv.click();
+        await cvv.fill(String(securityCode).trim());
+      }
+    }
+
+    // 4. Fill Postal / ZIP code
+    if (postalCode) {
+      const zip = await resolveInput(
+        checkoutLocators.cardPostalInput(this.page),
+        'input[name*="zip" i], input[name*="postal" i], input[placeholder*="zip" i]'
+      );
+      if (await zip.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await zip.click();
+        await zip.fill(String(postalCode).trim());
+      }
+    }
+
+    // 5. Click FreedomPay "SAVE" button to submit/tokenize card details
+    await this.page.waitForTimeout(500);
+    let saveClicked = false;
+    for (const frame of this.page.frames()) {
+      const btnInFrame = frame
+        .getByRole('button', { name: /^save$/i })
+        .or(frame.locator('button:has-text("SAVE"), input[value="SAVE"], [data-testid*="save"]'))
+        .first();
+      if (await btnInFrame.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await btnInFrame.scrollIntoViewIfNeeded().catch(() => {});
+        await btnInFrame.click({ force: true });
+        saveClicked = true;
+        break;
+      }
+    }
+    if (!saveClicked) {
+      const mainSaveBtn = this.page
+        .getByRole('button', { name: /^save$/i })
+        .or(this.page.locator('button:has-text("SAVE"), [data-testid*="save"]'))
+        .first();
+      if (await mainSaveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await mainSaveBtn.scrollIntoViewIfNeeded().catch(() => {});
+        await mainSaveBtn.click({ force: true });
+      }
+    }
+
+    // Wait for FreedomPay tokenization to process and Place Order button to become active
+    await this.page.waitForTimeout(2000);
+  }
+
+  /**
+   * Fills contact info fields for Guest User checkout if they are present and empty.
+   * @param {Object} contact
+   * @param {string} [contact.firstName='Test']
+   * @param {string} [contact.lastName='User']
+   * @param {string} [contact.email]
+   * @param {string} [contact.phone]
+   */
+  async fillContactInfo({ firstName = 'Chandan', lastName = 'CS', email = 'chandancs2311@gmail.com', phone = '4152625265' }) {
+    const fn = checkoutLocators.firstNameInput(this.page).first();
+    await expect(fn).toBeVisible({ timeout: 15000 });
+    await fn.scrollIntoViewIfNeeded().catch(() => {});
+    await fn.click();
+    await fn.fill('');
+    await fn.pressSequentially(firstName, { delay: 20 });
+    await fn.press('Tab');
+
+    const ln = checkoutLocators.lastNameInput(this.page).first();
+    await expect(ln).toBeVisible({ timeout: 5000 });
+    await ln.click();
+    await ln.fill('');
+    await ln.pressSequentially(lastName, { delay: 20 });
+    await ln.press('Tab');
+
+    const em = checkoutLocators.contactEmailInput(this.page).first();
+    await expect(em).toBeVisible({ timeout: 5000 });
+    await em.click();
+    await em.fill('');
+    await em.pressSequentially(email, { delay: 20 });
+    await em.press('Tab');
+
+    const ph = checkoutLocators.contactPhoneInput(this.page).first();
+    await expect(ph).toBeVisible({ timeout: 5000 });
+    await ph.click();
+    await ph.fill('');
+    const cleanPhone = phone.replace(/\D/g, '');
+    await ph.pressSequentially(cleanPhone, { delay: 20 });
+    await ph.press('Tab');
+
+    console.log('Contact info values:', {
+      fn: await fn.inputValue().catch(() => ''),
+      ln: await ln.inputValue().catch(() => ''),
+      em: await em.inputValue().catch(() => ''),
+      ph: await ph.inputValue().catch(() => ''),
+    });
+
+    await this.page.waitForTimeout(500);
   }
 }
 

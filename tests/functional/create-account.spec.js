@@ -16,7 +16,7 @@ test.describe('Fudgie Fanatics - Create Account Functional Tests', { tag: '@func
       await cookieBtn.first().click().catch(() => {});
     });
   });
-
+ 
   test(
     'TC_001: Verify user cannot create an account using an email address that is already registered',
     async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe('Fudgie Fanatics - Create Account Functional Tests', { tag: '@func
         const existingEmail = testData.user.email || 'chandancs2311@gmail.com';
         await signUpPage.fillEmail(existingEmail);
       });
-
+    
       await test.step('3. Enter password', async () => {
         const password = testData.user.password || 'CarvelTest@123';
         await signUpPage.fillPassword(password);

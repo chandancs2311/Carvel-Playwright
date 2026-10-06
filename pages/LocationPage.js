@@ -81,10 +81,10 @@ class LocationPage extends BasePage {
    */
   async selectAddressResult(address) {
     const addressResult = locationLocators.addressResultItem(this.page, address).first();
-    await expect(addressResult).toBeVisible({ timeout: 10000 });
+    await expect(addressResult).toBeVisible({ timeout: 20000 });
     await addressResult.click({ force: true });
     // Wait for the suggestion list to be dismissed and stores to populate
-    await this.page.waitForTimeout(1000);
+    await this.page.waitForTimeout(1500);
   }
 
   /**

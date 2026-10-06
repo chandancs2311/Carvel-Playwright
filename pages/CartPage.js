@@ -136,8 +136,7 @@ class CartPage extends BasePage {
 
     // If checkout button is disabled (e.g. scheduled time cutoff expired), update timing to enable checkout
     if (await btn.isDisabled().catch(() => false)) {
-      const cartDrawer = this.page.locator('[role="dialog"], .cart-drawer, [aria-label*="cart" i], [class*="cart"]');
-      const changeTimingBtn = cartDrawer
+      const changeTimingBtn = this.page
         .getByRole('button', { name: /^change$/i })
         .or(this.page.getByTestId('cart_order_info'))
         .or(this.page.getByRole('button', { name: 'Change', exact: true }))
@@ -186,11 +185,17 @@ class CartPage extends BasePage {
       }
     }
 
-    // Playwright Best Practice: Wait for Checkout UI landmark directly
+    // Playwright Best Practice: Wait for Checkout UI landmark or URL directly
+    await this.page
+      .waitForURL((url) => url.pathname.includes('/checkout'), { timeout: 15000 })
+      .catch(() => {});
+
     const checkoutLandmark = this.page
       .getByRole('button', { name: /place order/i })
+      .or(this.page.getByTestId('btn_place_order'))
       .or(this.page.getByRole('heading', { name: /you’re almost there|order details|payment/i }))
-      .or(this.page.getByTestId('btn_place_order'));
+      .or(this.page.getByText(/^payment$/i))
+      .or(this.page.getByText(/credit\s*\/\s*debit card/i));
 
     await expect(checkoutLandmark.first()).toBeVisible({ timeout: 45000 });
   }

@@ -56,6 +56,63 @@ const checkoutLocators = {
       .or(page.getByText(/thank you for your order|order successfully placed|order confirmed|your order is placed|your order has been|order #\s*\d+|confirmation #/i))
       .or(page.getByTestId('order_confirmation_container'))
       .or(page.locator('.orderConfirmation, [data-testid*="confirmation"], [class*="orderSuccess"], [class*="confirmation"]')),
+
+  // Option to select new card / enter credit card
+  newCardOption: (page) =>
+    page
+      .getByTestId('btn_creditcard')
+      .or(page.getByRole('radio', { name: 'creditcard' }))
+      .or(page.getByRole('radiogroup', { name: 'creditcard' }).getByRole('radio'))
+      .or(page.getByRole('radiogroup', { name: 'creditcard' })),
+
+  // Card Number field
+  cardNumberInput: (page) =>
+    page
+      .getByLabel(/card number/i)
+      .or(page.locator('input[name="cardNumber"], input[name="cardnumber"], input[id*="cardNumber" i], input[autocomplete="cc-number"], input[placeholder*="Card number" i], input[data-testid*="card_number"]')),
+
+  // Card Expiration date field (MM/YY)
+  cardExpiryInput: (page) =>
+    page
+      .getByLabel(/expir|exp date|mm\s*\/\s*yy/i)
+      .or(page.locator('input[name="exp-date"], input[name="expiry"], input[id*="exp" i], input[autocomplete="cc-exp"], input[placeholder*="MM" i], input[data-testid*="exp"]')),
+
+  // Card CVC / CVV / Security Code field
+  cardCvvInput: (page) =>
+    page
+      .getByLabel(/cvc|cvv|security code/i)
+      .or(page.locator('input[name="cvc"], input[name="cvv"], input[id*="cvv" i], input[id*="cvc" i], input[autocomplete="cc-csc"], input[placeholder*="CVC" i], input[placeholder*="CVV" i], input[placeholder*="Security code" i], input[data-testid*="cvv"]')),
+
+  // Billing Postal / ZIP code field
+  cardPostalInput: (page) =>
+    page
+      .getByLabel(/zip|postal/i)
+      .or(page.locator('input[name="postal"], input[name="postalCode"], input[name="zip"], input[id*="zip" i], input[id*="postal" i], input[autocomplete="postal-code"], input[placeholder*="Zip" i], input[placeholder*="Postal" i], input[data-testid*="zip"]')),
+
+  // Guest Contact Information fields
+  firstNameInput: (page) =>
+    page
+      .getByTestId('txt_checkout_firstname')
+      .or(page.getByRole('textbox', { name: /first name/i }))
+      .or(page.locator('input[name="firstname" i], input[id*="firstname" i]')),
+
+  lastNameInput: (page) =>
+    page
+      .getByTestId('txt_checkout_lastname')
+      .or(page.getByRole('textbox', { name: /last name/i }))
+      .or(page.locator('input[name="lastname" i], input[id*="lastname" i]')),
+
+  contactEmailInput: (page) =>
+    page
+      .getByTestId('txt_checkout_email')
+      .or(page.getByRole('textbox', { name: /^email/i }))
+      .or(page.locator('input[name="email" i], input[id*="email" i], input[type="email"]')),
+
+  contactPhoneInput: (page) =>
+    page
+      .getByTestId('txt_checkout_phonenumber')
+      .or(page.getByRole('textbox', { name: /phone/i }))
+      .or(page.locator('input[name="phonenumber" i], input[name="phone" i], input[id*="phone" i], input[type="tel"]')),
 };
 
 module.exports = checkoutLocators;

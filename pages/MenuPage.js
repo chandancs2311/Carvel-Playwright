@@ -29,7 +29,7 @@ class MenuPage extends BasePage {
     await expect(cat).toBeVisible({ timeout: 20000 });
     await cat.click();
   }
-
+  
   /**
    * Clicks the Scooped Ice Cream product card to open its customization view.
    */
@@ -37,7 +37,7 @@ class MenuPage extends BasePage {
     const product = this.scoopedIceCreamProduct.first();
     await expect(product).toBeVisible({ timeout: 15000 });
     await product.scrollIntoViewIfNeeded();
-
+                                   
     const addToCartBtn = this.page.getByTestId('btn_add_to_cart');
     await expect(async () => {
       await product.click();
